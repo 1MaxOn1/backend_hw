@@ -1,4 +1,5 @@
-from fastapi.testclient import TestClient
+import httpx
+from httpx import ASGITransport
 from unittest.mock import patch, AsyncMock, ANY
 from datetime import datetime
 from app.main import app
@@ -16,8 +17,8 @@ def test_create_item():
             created_at=datetime.now()
         )
         mock_create_item.return_value = mock_item
-        client = TestClient(app)
-        response = client.post("/items", json={"name": "test", "description": "desc"})
+        with httpx.Client(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = client.post("/items", json={"name": "test", "description": "desc"})
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "test"
@@ -35,8 +36,8 @@ def test_get_item_found():
     )
     with patch("app.api.routes.crud.get_item", new_callable=AsyncMock) as mock_get_item:
         mock_get_item.return_value = mock_item
-        client = TestClient(app)
-        response = client.get("/items/1")
+        with httpx.Client(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = client.get("/items/1")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == 1
@@ -46,8 +47,8 @@ def test_get_item_found():
 def test_get_item_not_found():
     with patch("app.api.routes.crud.get_item", new_callable=AsyncMock) as mock_get_item:
         mock_get_item.return_value = None
-        client = TestClient(app)
-        response = client.get("/items/999")
+        with httpx.Client(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = client.get("/items/999")
         assert response.status_code == 404
         assert response.json()["detail"] == "Item not found"
         mock_get_item.assert_awaited_once_with(ANY, 999)
